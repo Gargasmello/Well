@@ -72,9 +72,6 @@ public class Pouring : MonoBehaviour
     float _ropeAtStart;
     bool _emptied;
 
-    /// <summary>How long the whole pour takes.</summary>
-    public float Duration => duration;
-
     void Update()
     {
         if (crank == null || bucket == null)
@@ -114,35 +111,6 @@ public class Pouring : MonoBehaviour
 
         if (rope != null)
             rope.Refresh();
-    }
-
-    /// <summary>
-    /// Pose the pour at a given moment without advancing it. Used by the previews,
-    /// which cannot run the animation. Everything else - including the bucket actually
-    /// emptying - happens exactly as it would in play.
-    /// </summary>
-    public void PoseAt(float seconds)
-    {
-        if (_ropeAtStart <= 0f && crank != null)
-            _ropeAtStart = crank.RopeLength;
-
-        ApplyPose(seconds);
-    }
-
-    /// <summary>Put the bucket back where it simply hangs: no swing, no tip, no stream.</summary>
-    public void ResetPose()
-    {
-        if (rope != null)
-        {
-            rope.SideSwing = 0f;
-            rope.Refresh();
-        }
-
-        if (bucketTransform != null)
-            bucketTransform.localRotation = Quaternion.identity;
-
-        if (pourStream != null)
-            pourStream.gameObject.SetActive(false);
     }
 
     void ApplyPose(float seconds)
@@ -234,16 +202,4 @@ public class Pouring : MonoBehaviour
     }
 
     static float Smooth(float t) => t * t * (3f - 2f * t);
-
-    /// <summary>Used by the scene builder to hook the references up.</summary>
-    public void Bind(Crank crank, Bucket bucket, Rope rope, Transform bucketTransform,
-                     AudioSource pour, Transform pourStream)
-    {
-        this.crank = crank;
-        this.bucket = bucket;
-        this.rope = rope;
-        this.bucketTransform = bucketTransform;
-        this.pour = pour;
-        this.pourStream = pourStream;
-    }
 }

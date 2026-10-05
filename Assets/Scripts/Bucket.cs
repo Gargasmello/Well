@@ -8,8 +8,6 @@ using UnityEngine;
 /// the well - at which point it is ready to be poured, and Pouring takes it from
 /// there. The bucket only empties once the water has actually been tipped out.
 ///
-/// Nothing about success is random: crank far enough and you always reach water.
-/// The only uncertainty is how far that is, which is what makes the splash worth
 /// listening for.
 /// </summary>
 public class Bucket : MonoBehaviour
@@ -62,14 +60,8 @@ public class Bucket : MonoBehaviour
         }
     }
 
-    /// <summary>Shallowest the water table can be.</summary>
-    public float MinWaterDepth => minWaterDepth;
-
     /// <summary>Deepest the water table can be.</summary>
     public float MaxWaterDepth => maxWaterDepth;
-
-    /// <summary>Rope length at which a full bucket becomes ready to pour.</summary>
-    public float PourAtRopeLength => pourAtRopeLength;
 
     float _waterDepth;
     float _lastLength;
@@ -99,11 +91,8 @@ public class Bucket : MonoBehaviour
         Refresh(length);
     }
 
-    /// <summary>
-    /// Work out the bucket's state for a given rope length.
-    /// Called every frame; the scene builder and the previews call it directly too.
-    /// </summary>
-    public void Refresh(float ropeLength)
+    /// <summary>Work out the bucket's state for the current rope length.</summary>
+    void Refresh(float ropeLength)
     {
         // Down past the water table: the bucket fills.
         if (!HasWater && ropeLength >= WaterDepth)
@@ -124,7 +113,7 @@ public class Bucket : MonoBehaviour
     }
 
     /// <summary>Start a fresh trip: a new water table, and an empty bucket.</summary>
-    public void StartNewTrip()
+    void StartNewTrip()
     {
         HasWater = false;
         PourPending = false;
@@ -146,19 +135,6 @@ public class Bucket : MonoBehaviour
 
         if (water != null)
             water.gameObject.SetActive(false);
-    }
-
-    /// <summary>Force the water table to a fixed depth, for the scene builder and previews.</summary>
-    public void SetWaterDepth(float depth)
-    {
-        _waterDepth = Mathf.Clamp(depth, minWaterDepth, maxWaterDepth);
-    }
-
-    /// <summary>Used by the scene builder to hook the references up.</summary>
-    public void Bind(Crank crank, Transform water)
-    {
-        this.crank = crank;
-        this.water = water;
     }
 
     void PickWaterDepth()

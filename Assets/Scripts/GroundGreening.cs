@@ -58,13 +58,9 @@ public class GroundGreening : MonoBehaviour
         GrowPlants();
     }
 
-    /// <summary>
-    /// Jump straight to the state the current delivered count implies, with no
-    /// animation. Used by the scene builder and the previews.
-    /// </summary>
-    public void SnapToCurrentState()
+    /// <summary>Jump straight to the state the current delivered count implies, with no animation.</summary>
+    void SnapToCurrentState()
     {
-        // Awake does not run in edit mode, so make sure the array exists either way.
         if (_plantScale == null)
             _plantScale = new float[plants == null ? 0 : plants.Length];
 
@@ -125,14 +121,5 @@ public class GroundGreening : MonoBehaviour
         // The plant's origin is at ground level, so scaling the root makes it grow upwards.
         plants[index].localScale = new Vector3(scale, scale, 1f);
         plants[index].gameObject.SetActive(scale > 0.001f);
-    }
-
-    /// <summary>Used by the scene builder to hook the references up.</summary>
-    public void Bind(Bucket bucket, SpriteRenderer grass, SpriteRenderer dirt, Transform[] plants)
-    {
-        this.bucket = bucket;
-        this.grass = grass;
-        this.dirt = dirt;
-        this.plants = plants;
     }
 }

@@ -57,12 +57,4 @@ public class Rope : MonoBehaviour
 
         bucket.localPosition = end;
     }
-
-    /// <summary>Used by the scene builder to hook the references up.</summary>
-    public void Bind(Crank crank, Transform ropeBlock, Transform bucket)
-    {
-        this.crank = crank;
-        this.ropeBlock = ropeBlock;
-        this.bucket = bucket;
-    }
 }

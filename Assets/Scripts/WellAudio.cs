@@ -101,7 +101,7 @@ public class WellAudio : MonoBehaviour
         splash.Play();
     }
 
-    /// <summary>Cached on first use, so it still works when the builder wires things up in edit mode.</summary>
+    /// <summary>Looked up once and kept, rather than on every splash.</summary>
     AudioLowPassFilter SplashFilter
     {
         get
@@ -110,14 +110,5 @@ public class WellAudio : MonoBehaviour
                 _splashFilter = splash.GetComponent<AudioLowPassFilter>();
             return _splashFilter;
         }
-    }
-
-    /// <summary>Used by the scene builder to hook the references up.</summary>
-    public void Bind(Crank crank, Bucket bucket, AudioSource creak, AudioSource splash)
-    {
-        this.crank = crank;
-        this.bucket = bucket;
-        this.creak = creak;
-        this.splash = splash;
     }
 }
