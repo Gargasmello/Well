@@ -1,67 +1,57 @@
 using UnityEngine;
 
-/// <summary>
-/// Emptying the bucket.
-///
-/// A full bucket cannot simply be tipped where it hangs: it comes up directly over
-/// the well, so anything poured out would fall straight back down the shaft. So the
-/// bucket first swings out clear of the well wall, then tips, then swings back.
-///
-/// The crank is locked for the whole thing, so you cannot start heading back down
-/// with the bucket half emptied.
-/// </summary>
+// Swings the bucket clear of the well, tips it, then puts it back, and locks the crank
+// for the duration. Started by Bucket.PourCount, calls Bucket.FinishPour part way
+// through, and drives Rope.SideSwing and Crank.SetRopeLength.
+//
+// The bucket cannot simply be tipped where it hangs: it comes up directly over the
+// well, so the water would fall straight back down the shaft.
 public class Pouring : MonoBehaviour
 {
-    [Tooltip("The crank. It gets locked while the pour plays.")]
     [SerializeField] Crank crank;
-
-    [Tooltip("The bucket's state. The pour is triggered by the bucket coming back up full.")]
     [SerializeField] Bucket bucket;
-
-    [Tooltip("The rope. The bucket swings on the end of it.")]
     [SerializeField] Rope rope;
 
-    [Tooltip("The bucket itself, so it can be tipped over.")]
+    // Tipped over during the pour.
     [SerializeField] Transform bucketTransform;
 
-    [Tooltip("The watering sound.")]
     [SerializeField] AudioSource pour;
 
-    [Tooltip("The falling water, shown while the bucket is tipped. Starts hidden.")]
+    // Shown while the bucket is tipped. Starts hidden.
     [SerializeField] Transform pourStream;
 
     [Header("Swing")]
-    [Tooltip("How far to the side the bucket swings before it tips, in metres. Has to be at " +
-             "least the well's half width plus the bucket's own length, or the bucket ends " +
-             "up half hidden behind the well wall.")]
+    // Has to be at least the well's half width plus the bucket's own length, or the
+    // bucket ends up half hidden behind the well wall.
+    [Tooltip("How far to the side the bucket swings before it tips, in metres.")]
     [SerializeField] float swingOutTo = 2.55f;
 
-    [Tooltip("Rope paid out during the swing. Leave it equal to the length the bucket comes " +
-             "up at to swing the bucket sideways at the same height; lower values make it " +
-             "rise, higher values drop it towards the ground.")]
+    // Rope length during the swing. Equal to the length the bucket comes up at means it
+    // swings sideways at the same height; lower makes it rise, higher drops it.
     [SerializeField] float payOutTo = 1.2f;
 
-    [Tooltip("How far the bucket tips, in degrees. Enough that the low side of the rim goes " +
-             "under the water, without turning the bucket into an unreadable box.")]
+    // Degrees. Enough that the low side of the rim goes under the water, without turning
+    // the bucket into an unreadable box.
     [SerializeField] float tipDegrees = -55f;
 
-    [Tooltip("Height of the ground the water lands on.")]
+    // Height of the ground the water lands on.
     [SerializeField] float groundY = -2.8f;
 
-    [Tooltip("Where the low side of the rim sits in the bucket's own space. Used to work out " +
-             "where the water actually comes over the edge once the bucket is tipped.")]
+    // Where the low side of the rim sits in the bucket's own space. These duplicate the
+    // bucket geometry in the scene: if the bucket is resized by hand they have to follow,
+    // or the water comes off the wrong edge.
     [SerializeField] float rimHalfWidth = 0.46f;
     [SerializeField] float rimOffsetY = -0.36f;
 
-    [Tooltip("How thick the falling water is.")]
     [SerializeField] float streamWidth = 0.16f;
 
     [Header("Timing")]
-    [Tooltip("Seconds the whole pour takes. The crank is locked for this long, which is " +
-             "deliberately shorter than the sound so the tail plays while you crank again.")]
+    // Seconds. Deliberately shorter than the watering sound, so the tail plays while the
+    // player cranks again.
     [SerializeField] float duration = 1.5f;
 
-    // Where each stage of the pour sits on the 0..1 timeline.
+    // Fractions of duration. Order matters: OutEnd < TipEnd < EmptyAt < HoldEnd. EmptyAt
+    // has to sit inside the hold, or the water leaves before the bucket is tipped.
     const float OutEnd  = 0.30f;
     const float TipEnd  = 0.50f;
     const float HoldEnd = 0.67f;
@@ -77,6 +67,7 @@ public class Pouring : MonoBehaviour
         if (crank == null || bucket == null)
             return;
 
+        // PourCount is a running total; a change means the bucket is back up and full.
         if (_elapsed < 0f && bucket.PourCount != _lastPourCount)
         {
             _lastPourCount = bucket.PourCount;
@@ -113,6 +104,8 @@ public class Pouring : MonoBehaviour
             rope.Refresh();
     }
 
+    // Out, tip, hold, back. Everything is derived from the elapsed time, so the pose is a
+    // pure function of it and the animation cannot drift.
     void ApplyPose(float seconds)
     {
         float p = Mathf.Clamp01(seconds / duration);
@@ -157,13 +150,13 @@ public class Pouring : MonoBehaviour
         if (bucketTransform != null)
             bucketTransform.localRotation = Quaternion.Euler(0f, 0f, tip);
 
-        // The water leaves the bucket part way through the hold, once it is tipped over.
+        // The water leaves part way through the hold, once the bucket is tipped over.
         if (!_emptied && p >= EmptyAt)
         {
             _emptied = true;
             bucket.FinishPour();
 
-            // Only actually make a sound in play mode; the editor poses this too.
+            // Guarded so posing the animation in the editor stays silent.
             if (pour != null && Application.isPlaying)
                 pour.Play();
         }
@@ -171,11 +164,8 @@ public class Pouring : MonoBehaviour
         UpdateStream(p, swing, length, tip);
     }
 
-    /// <summary>
-    /// Show the water falling from the tipped bucket down to the ground. This is the
-    /// whole point of swinging the bucket out: poured where it hangs, the water would
-    /// drop straight back down the well.
-    /// </summary>
+    // The falling water. Hangs from the low side of the tipped rim down to the ground,
+    // which is why the rim geometry above has to match the bucket in the scene.
     void UpdateStream(float p, float swing, float ropeLength, float tip)
     {
         if (pourStream == null)
@@ -188,7 +178,7 @@ public class Pouring : MonoBehaviour
             return;
 
         // Where the low side of the rim ends up once the bucket is tipped. That is the
-        // edge the water comes over, so it is where the stream has to hang from.
+        // edge the water comes over.
         float rad = tip * Mathf.Deg2Rad;
         float lipX = rimHalfWidth * Mathf.Cos(rad) - rimOffsetY * Mathf.Sin(rad);
         float lipY = rimHalfWidth * Mathf.Sin(rad) + rimOffsetY * Mathf.Cos(rad);
