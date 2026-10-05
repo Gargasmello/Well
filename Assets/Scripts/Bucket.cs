@@ -8,7 +8,7 @@ using UnityEngine;
 /// the well - at which point it is ready to be poured, and Pouring takes it from
 /// there. The bucket only empties once the water has actually been tipped out.
 ///
-/// listening for.
+///
 /// </summary>
 public class Bucket : MonoBehaviour
 {
