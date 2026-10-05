@@ -30,6 +30,7 @@ public static class BuildWellScene
     const string PreviewGreenPath   = "Logs/well-3-green.png";
     const string PreviewDescendPath = "Logs/well-4-descending.png";
     const string PreviewPourPath    = "Logs/well-5-pouring.png";
+    const string PreviewMouthPath   = "Logs/well-6-in-the-mouth.png";
 
     // Sorting order: higher numbers draw in front.
     // Anything that goes "down" is hidden by something drawn in front of it:
@@ -50,9 +51,9 @@ public static class BuildWellScene
     const int OrderGround      =  16;   // in front of the whole bucket and the rope
     const int OrderGrass       =  17;
     const int OrderPlant       =  18;
-    const int OrderWellFront   =  20;
-    const int OrderWellRim     =  21;
-    const int OrderWellHole    =  22;
+    const int OrderWellBack    =   8;   // far rim and shaft dark. BEHIND the bucket.
+    const int OrderWellFront   =  20;   // masonry below the mouth
+    const int OrderWellNearRim =  21;   // the near lip the bucket disappears behind
     const int OrderWellEdge    =  23;
     const int OrderPourStream  =  24;   // the water falling out of the tipped bucket
     // The posts sit behind the bucket, so that when the bucket swings out past one to
@@ -67,8 +68,12 @@ public static class BuildWellScene
     // Key dimensions, in metres.
     const float GroundTopY  = -2.8f;    // Height of the ground surface
     const float WellWidth   =  2.8f;
-    const float WellTopY    = -0.9f;    // Top of the rim. The bucket disappears below this.
-    const float RimHeight   =  0.30f;
+    const float WellTopY    = -0.9f;    // top of the stone ring
+    // The mouth is split into three horizontal bands. The far rim and the dark go behind
+    // the bucket; the near lip is what the bucket actually vanishes behind.
+    const float FarRimHeight  = 0.07f;
+    const float MouthHeight   = 0.18f;
+    const float NearRimHeight = 0.14f;
     const float AxleY       =  1.15f;   // Height of the axle, where the top of the rope is pinned
     const float WheelRadius =  0.42f;
     const float PostX       =  1.75f;   // Distance from the centre line to each post
@@ -226,7 +231,9 @@ public static class BuildWellScene
         var clouds = Child("Clouds", parent);
 
         BuildCloud(clouds, block, new Vector2( 3.0f, 2.55f), 1.00f);
-        BuildCloud(clouds, block, new Vector2(-3.8f, 2.85f), 0.80f);
+        // Moved by hand in the editor and then baked back in here: the scene is generated,
+        // so a position only survives a rebuild if it lives in this file.
+        BuildCloud(clouds, block, new Vector2(-4.3f, 1.61f), 0.80f);
         BuildCloud(clouds, block, new Vector2( 5.1f, 2.15f), 0.65f);
     }
 
@@ -256,14 +263,29 @@ public static class BuildWellScene
     {
         var well = Child("WellBody", parent);
 
-        float rimCenterY  = WellTopY - RimHeight * 0.5f;
-        float bodyTopY    = WellTopY - RimHeight;
-        float bodyHeight  = GroundTopY - bodyTopY;
-        float bodyCenterY = (GroundTopY + bodyTopY) * 0.5f;
+        float farRimTop  = WellTopY;                        // -0.90
+        float mouthTop   = farRimTop - FarRimHeight;        // -0.97
+        float nearRimTop = mouthTop - MouthHeight;          // -1.15
+        float wallTop    = nearRimTop - NearRimHeight;      // -1.29
 
-        // The wall is built as horizontal courses, alternating shade, so it reads as
-        // masonry rather than one grey slab. It sits in front of the bucket, which is
-        // what makes the bucket disappear as it goes down.
+        // The far edge of the ring and the dark of the shaft. Both sit BEHIND the bucket,
+        // so the bucket stays visible as it enters the mouth.
+        Block("RimFar",  well, block, StoneLit, new Vector2(WellWidth + 0.12f, FarRimHeight),
+              new Vector2(0f, farRimTop - FarRimHeight * 0.5f), OrderWellBack);
+        Block("Opening", well, block, PitDark, new Vector2(WellWidth - 0.5f, MouthHeight),
+              new Vector2(0f, mouthTop - MouthHeight * 0.5f), OrderWellBack);
+
+        // The near lip is the front edge of the ring, and it is what the bucket actually
+        // disappears behind. Splitting the mouth here is the whole point: drawn as one
+        // piece in front of the bucket, the bucket looks like it is standing behind the
+        // well instead of going into it.
+        Block("RimNear", well, block, StoneLit, new Vector2(WellWidth + 0.12f, NearRimHeight),
+              new Vector2(0f, nearRimTop - NearRimHeight * 0.5f), OrderWellNearRim);
+
+        // Masonry courses below the lip.
+        float bodyHeight  = GroundTopY - wallTop;
+        float bodyCenterY = (GroundTopY + wallTop) * 0.5f;
+
         const int courses  = 5;
         float courseHeight = bodyHeight / courses;
         for (int i = 0; i < courses; i++)
@@ -272,12 +294,6 @@ public static class BuildWellScene
             Block($"Course{i}", well, block, i % 2 == 0 ? Stone : StoneDark,
                   new Vector2(WellWidth, courseHeight), new Vector2(0f, y), OrderWellFront);
         }
-
-        // The rim: a band of lighter stone with a dark hole cut through it.
-        Block("Rim",  well, block, StoneLit, new Vector2(WellWidth + 0.12f, RimHeight),
-              new Vector2(0f, rimCenterY), OrderWellRim);
-        Block("Hole", well, block, PitDark,  new Vector2(WellWidth - 0.5f, RimHeight - 0.12f),
-              new Vector2(0f, rimCenterY), OrderWellHole);
 
         // Lighter edges down each side, to give the wall some thickness.
         float edgeX = WellWidth * 0.5f - 0.11f;
@@ -602,6 +618,16 @@ public static class BuildWellScene
         bucket.Refresh(crank.RopeLength);                    // ready to pour
         pouring.PoseAt(pouring.Duration * 0.6f);             // out and tipped
         RenderTo(camera, PreviewPourPath);
+
+        // 6. Bucket down in the mouth, far enough that the near lip is cutting it. It has
+        //    to be visible against the dark and cut off only by the lip - this is the shot
+        //    that proves the mouth is split rather than drawn as one piece.
+        pouring.ResetPose();
+        crank.SetRopeLength(1.3f);
+        bucket.Refresh(crank.RopeLength);
+        rope.Refresh();
+        greening.SnapToCurrentState();
+        RenderTo(camera, PreviewMouthPath);
 
         Debug.Log("[BuildWellScene] Previews written to Logs/");
     }

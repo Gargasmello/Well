@@ -129,6 +129,22 @@ public class Pouring : MonoBehaviour
         ApplyPose(seconds);
     }
 
+    /// <summary>Put the bucket back where it simply hangs: no swing, no tip, no stream.</summary>
+    public void ResetPose()
+    {
+        if (rope != null)
+        {
+            rope.SideSwing = 0f;
+            rope.Refresh();
+        }
+
+        if (bucketTransform != null)
+            bucketTransform.localRotation = Quaternion.identity;
+
+        if (pourStream != null)
+            pourStream.gameObject.SetActive(false);
+    }
+
     void ApplyPose(float seconds)
     {
         float p = Mathf.Clamp01(seconds / duration);
