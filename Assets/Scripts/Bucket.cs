@@ -34,8 +34,12 @@ public class Bucket : MonoBehaviour
     public int PourCount { get; private set; }
     public int DeliveredCount { get; private set; }
 
+    public int HitGroundCount { get; private set; }
+
     public bool HasWater { get; private set; }
     public bool PourPending { get; private set; }
+
+    public bool WaterExist = false;
 
     // Metres of rope. Picked lazily so the scene does not have to store one.
     public float WaterDepth
@@ -79,10 +83,16 @@ public class Bucket : MonoBehaviour
 
     void Refresh(float ropeLength)
     {
-        if (!HasWater && ropeLength >= WaterDepth)
+        if (!HasWater && ropeLength >= WaterDepth && WaterExist)
         {
             HasWater = true;
             FillCount++;
+        }
+
+        if (!HasWater && ropeLength >= WaterDepth && !WaterExist)
+        {
+            
+            HitGroundCount++;
         }
 
         // Ready to pour, but not emptied: the pour takes the water, not this.
@@ -101,6 +111,7 @@ public class Bucket : MonoBehaviour
         HasWater = false;
         PourPending = false;
         PickWaterDepth();
+        RandomWater();
 
         if (water != null)
             water.gameObject.SetActive(false);
@@ -134,6 +145,51 @@ public class Bucket : MonoBehaviour
 
             if (previous <= 0f || Mathf.Abs(_waterDepth - previous) >= span * 0.25f)
                 return;
+        }
+    }
+
+    private void RandomWater()
+    {
+        int rand = Random.Range(0, 8);
+        WaterExist = false;
+        switch (rand)
+        {
+            case 0:
+                WaterExist = false; 
+                
+                break;
+            case 1:
+                WaterExist = false;
+
+                break;
+            case 2:
+                WaterExist = false;
+
+                break;
+            case 3:
+                WaterExist = false;
+
+                break;
+            case 4:
+                WaterExist = false;
+
+                break;
+            case 5:
+                WaterExist = false;
+
+                break;
+            case 6:
+                WaterExist = true;
+
+                break;
+            case 7:
+                WaterExist = true;
+
+                break;
+            case 8:
+                WaterExist = true;
+
+                break;
         }
     }
 }

@@ -19,6 +19,7 @@ public class WellAudio : MonoBehaviour
     // The splash is the only feedback that the bucket reached water, so it carries the
     // distance: quiet and dull when deep.
     [SerializeField] AudioSource splash;
+    [SerializeField] AudioSource ground;
 
     [SerializeField] float splashVolumeNear = 1f;
     [SerializeField] float splashVolumeFar = 0.2f;
@@ -29,6 +30,7 @@ public class WellAudio : MonoBehaviour
 
     AudioLowPassFilter _splashFilter;
     int _lastFillCount;
+    int _lastHitGroundCount;
 
     void Start()
     {
@@ -46,6 +48,7 @@ public class WellAudio : MonoBehaviour
     {
         UpdateCreak();
         UpdateSplash();
+        UpdateGround();
     }
 
     void UpdateCreak()
@@ -84,6 +87,28 @@ public class WellAudio : MonoBehaviour
             SplashFilter.cutoffFrequency = Mathf.Lerp(splashCutoffNear, splashCutoffFar, distance);
 
         splash.Play();
+    }
+
+    void UpdateGround()
+    {
+        if (ground == null || bucket == null)
+            return;
+
+        if (bucket.HitGroundCount == _lastHitGroundCount)
+            return;
+
+        _lastHitGroundCount = bucket.HitGroundCount;
+
+        // Measured from the surface rather than from the shallowest the table ever gets,
+        // so the whole scale slides down together: 0 at the surface, 1 at the deepest.
+        float distance = Mathf.Clamp01(bucket.WaterDepth / bucket.MaxWaterDepth);
+
+        splash.volume = Mathf.Lerp(splashVolumeNear, splashVolumeFar, distance);
+
+        if (SplashFilter != null)
+            SplashFilter.cutoffFrequency = Mathf.Lerp(splashCutoffNear, splashCutoffFar, distance);
+
+        ground.Play();
     }
 
     // Looked up once and kept.
