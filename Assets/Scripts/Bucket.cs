@@ -17,9 +17,15 @@ public class Bucket : MonoBehaviour
     [SerializeField] float minWaterDepth = 15f;
     [SerializeField] float maxWaterDepth = 30f;
 
-    // 0 = always water, 1 = never.
+    // Base chance a trip comes up dry. The ramps below scale with it, so the streak limits
+    // hold whatever this is set to.
     [Range(0f, 1f)]
     [SerializeField] float dryChance = 0.5f;
+
+    // Trips of dry before water is certain, and of wet before dry is certain. The chance
+    // walks evenly from 1 - dryChance to 1 over dryRamp, and down to 0 over wetRamp.
+    [SerializeField] int dryRamp = 3;
+    [SerializeField] int wetRamp = 3;
 
     [Header("Bucket")]
     // Shown while HasWater.
@@ -59,6 +65,24 @@ public class Bucket : MonoBehaviour
     float _lastLength;
     bool _wasGoingDown;
     bool _hitGround;
+    int _trips;
+    int _dryStreak;
+    int _wetStreak;
+
+    // Chance this trip has water. Walks evenly between the two extremes, so the step size
+    // follows dryChance rather than being fixed.
+    float WaterChance
+    {
+        get
+        {
+            float baseChance = 1f - dryChance;
+
+            return Mathf.Clamp01(
+                baseChance
+                + dryChance  * _dryStreak / dryRamp
+                - baseChance * _wetStreak / wetRamp);
+        }
+    }
 
     void Update()
     {
@@ -85,6 +109,8 @@ public class Bucket : MonoBehaviour
         {
             HasWater = true;
             FillCount++;
+            _wetStreak++;
+            _dryStreak = 0;
         }
 
         // Latched: the well has no bottom, so without this it would fire every frame.
@@ -92,6 +118,8 @@ public class Bucket : MonoBehaviour
         {
             _hitGround = true;
             HitGroundCount++;
+            _dryStreak++;
+            _wetStreak = 0;
         }
 
         // Ready to pour, but not emptied - the pour takes the water.
@@ -110,15 +138,30 @@ public class Bucket : MonoBehaviour
         HasWater = false;
         PourPending = false;
         _hitGround = false;
+        _trips++;
 
         PickWaterDepth();
-        WaterExist = Random.value >= dryChance;
+        PickWaterExist();
 
         // Water or bottom, the crank starts to fight back from here.
         crank.StrainFrom = WaterDepth;
 
         if (water != null)
             water.gameObject.SetActive(false);
+    }
+
+    // First trip is forced dry. The two ramps reach their extremes exactly at the ramp
+    // lengths, so those doubles as the streak caps.
+    void PickWaterExist()
+    {
+        if (_trips <= 1)
+            WaterExist = false;
+        else if (_dryStreak >= dryRamp)
+            WaterExist = true;
+        else if (_wetStreak >= wetRamp)
+            WaterExist = false;
+        else
+            WaterExist = Random.value < WaterChance;
     }
 
     // Called by Pouring part way through the animation.

@@ -2159,6 +2159,8 @@ MonoBehaviour:
   minWaterDepth: 15
   maxWaterDepth: 30
   dryChance: 0.5
+  dryRamp: 3
+  wetRamp: 3
   water: {fileID: 1230168102}
   newTripWithin: 1
   pourAtRopeLength: 1.2
@@ -5855,7 +5857,7 @@ MonoBehaviour:
   view: {fileID: 519420031}
   duration: 10
   zoomOutTo: 4.2
-  endY: -0.8
+  endY: -0.1
   clouds:
   - {fileID: 563702573}
   - {fileID: 114855905}

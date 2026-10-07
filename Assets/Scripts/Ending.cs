@@ -15,7 +15,7 @@ public class Ending : MonoBehaviour
     [SerializeField] Camera view;
     [SerializeField] float duration = 10f;
     [SerializeField] float zoomOutTo = 4.2f;
-    [SerializeField] float endY = -0.8f;
+    [SerializeField] float endY = -0.1f;
 
     // One entry per cloud, each a group of blocks. Wrapped individually, so they must not
     // share a parent that moves - the blocks of one cloud would wrap at different times.
@@ -38,7 +38,8 @@ public class Ending : MonoBehaviour
     {
         if (!_started)
         {
-            if (greening != null && greening.Green >= 1f)
+            // Waits for the pour to end, or Pouring.Finish would unlock the crank mid-outro.
+            if (greening != null && greening.Green >= 1f && (crank == null || !crank.Locked))
                 Begin();
             return;
         }
