@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// Creak follows how fast the wheel turns; splash volume and low-pass cutoff follow how
-// deep the water was. Reads TurnSpeed from Crank and FillCount from Bucket.
+// Creak follows wheel speed; splash and thud follow how deep the bucket went.
 public class WellAudio : MonoBehaviour
 {
     [SerializeField] Crank crank;
@@ -10,16 +9,14 @@ public class WellAudio : MonoBehaviour
     [Header("Wheel creak")]
     [SerializeField] AudioSource creak;
 
-    // Degrees per second at which the creak reaches full volume.
+    // Degrees per second for full volume.
     [SerializeField] float creakFullVolumeAt = 220f;
 
     [SerializeField] float creakMaxVolume = 0.55f;
 
     [Header("Splash")]
-    // The splash is the only feedback that the bucket reached water, so it carries the
-    // distance: quiet and dull when deep.
+    // The only sign the bucket reached water, so it carries the distance.
     [SerializeField] AudioSource splash;
-    [SerializeField] AudioSource ground;
 
     [SerializeField] float splashVolumeNear = 1f;
     [SerializeField] float splashVolumeFar = 0.2f;
@@ -28,7 +25,18 @@ public class WellAudio : MonoBehaviour
     [SerializeField] float splashCutoffNear = 1600f;
     [SerializeField] float splashCutoffFar = 400f;
 
+    [Header("Ground hit")]
+    // A dry trip. Softer than the splash: a disappointment, not a reward.
+    [SerializeField] AudioSource ground;
+
+    [SerializeField] float groundVolumeNear = 0.8f;
+    [SerializeField] float groundVolumeFar = 0.15f;
+
+    [SerializeField] float groundCutoffNear = 900f;
+    [SerializeField] float groundCutoffFar = 250f;
+
     AudioLowPassFilter _splashFilter;
+    AudioLowPassFilter _groundFilter;
     int _lastFillCount;
     int _lastHitGroundCount;
 
@@ -37,8 +45,7 @@ public class WellAudio : MonoBehaviour
         if (creak == null)
             return;
 
-        // Left playing at zero volume rather than started and stopped, so there is no
-        // click when the player grabs the wheel.
+        // Left running at zero volume, so grabbing the wheel makes no click.
         creak.loop = true;
         creak.volume = 0f;
         creak.Play();
@@ -56,8 +63,7 @@ public class WellAudio : MonoBehaviour
         if (creak == null || crank == null)
             return;
 
-        // While the pour has the crank locked the wheel is driven by the animation, not
-        // by the player, so the creak stays out of the way.
+        // Locked means the pour is driving the wheel, not the player.
         float effort = crank.Locked
             ? 0f
             : Mathf.Clamp01(Mathf.Abs(crank.TurnSpeed) / creakFullVolumeAt);
@@ -66,7 +72,7 @@ public class WellAudio : MonoBehaviour
         creak.pitch = Mathf.Lerp(0.85f, 1.15f, effort);
     }
 
-    // FillCount is a running total, so watch it for a change rather than for a value.
+    // The counts are running totals, so watch for a change rather than a value.
     void UpdateSplash()
     {
         if (splash == null || bucket == null)
@@ -77,8 +83,7 @@ public class WellAudio : MonoBehaviour
 
         _lastFillCount = bucket.FillCount;
 
-        // Measured from the surface rather than from the shallowest the table ever gets,
-        // so the whole scale slides down together: 0 at the surface, 1 at the deepest.
+        // 0 at the surface, 1 at the deepest the table ever gets.
         float distance = Mathf.Clamp01(bucket.WaterDepth / bucket.MaxWaterDepth);
 
         splash.volume = Mathf.Lerp(splashVolumeNear, splashVolumeFar, distance);
@@ -99,19 +104,16 @@ public class WellAudio : MonoBehaviour
 
         _lastHitGroundCount = bucket.HitGroundCount;
 
-        // Measured from the surface rather than from the shallowest the table ever gets,
-        // so the whole scale slides down together: 0 at the surface, 1 at the deepest.
         float distance = Mathf.Clamp01(bucket.WaterDepth / bucket.MaxWaterDepth);
 
-        splash.volume = Mathf.Lerp(splashVolumeNear, splashVolumeFar, distance);
+        ground.volume = Mathf.Lerp(groundVolumeNear, groundVolumeFar, distance);
 
-        if (SplashFilter != null)
-            SplashFilter.cutoffFrequency = Mathf.Lerp(splashCutoffNear, splashCutoffFar, distance);
+        if (GroundFilter != null)
+            GroundFilter.cutoffFrequency = Mathf.Lerp(groundCutoffNear, groundCutoffFar, distance);
 
         ground.Play();
     }
 
-    // Looked up once and kept.
     AudioLowPassFilter SplashFilter
     {
         get
@@ -119,6 +121,16 @@ public class WellAudio : MonoBehaviour
             if (_splashFilter == null && splash != null)
                 _splashFilter = splash.GetComponent<AudioLowPassFilter>();
             return _splashFilter;
+        }
+    }
+
+    AudioLowPassFilter GroundFilter
+    {
+        get
+        {
+            if (_groundFilter == null && ground != null)
+                _groundFilter = ground.GetComponent<AudioLowPassFilter>();
+            return _groundFilter;
         }
     }
 }

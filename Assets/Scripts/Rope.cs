@@ -1,8 +1,6 @@
 using UnityEngine;
 
-// Stretches the rope block between the axle and the bucket, and hangs the bucket off
-// the end of it. Reads the rope length from Crank, plus SideSwing, which Pouring
-// writes while it swings the bucket out.
+// Hangs the bucket off the end of the rope. Reads Crank; Pouring writes SideSwing.
 public class Rope : MonoBehaviour
 {
     [SerializeField] Crank crank;
@@ -12,7 +10,7 @@ public class Rope : MonoBehaviour
 
     [SerializeField] Transform ropeBlock;
 
-    // The bucket. Its origin is the end of the rope, at the top of the handle.
+    // Origin is the end of the rope, at the top of the handle.
     [SerializeField] Transform bucket;
 
     // Metres sideways. Normally zero; the pour animates it.
@@ -23,9 +21,7 @@ public class Rope : MonoBehaviour
         Refresh();
     }
 
-    // Draws the rope as a line from the axle to the bucket, so a swung bucket gets a
-    // taut diagonal rope instead of a vertical one that misses it. The block's +Y has
-    // to point at the axle, hence the -90 on the angle.
+    // Drawn axle-to-bucket, so the block's +Y points up the rope: hence the -90.
     public void Refresh()
     {
         if (crank == null || ropeBlock == null || bucket == null)

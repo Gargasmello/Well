@@ -4,44 +4,44 @@ using UnityEngine;
 //
 //   HasWater        true from the moment it passes the water table until the pour
 //   PourPending     true once it is back up and waiting for Pouring
-//   FillCount       ++ on fill      -> WellAudio plays the splash
-//   PourCount       ++ on ready     -> Pouring starts the animation
-//   DeliveredCount  ++ on tipped    -> GroundGreening greens the ground
-//
-// There is no failure case: going past the water table always fills the bucket.
+//   FillCount       ++ on fill         -> WellAudio plays the splash
+//   HitGroundCount  ++ on dry bottom   -> WellAudio plays the thud
+//   PourCount       ++ on ready        -> Pouring starts the animation
+//   DeliveredCount  ++ on tipped       -> GroundGreening greens the ground
 public class Bucket : MonoBehaviour
 {
     [SerializeField] Crank crank;
 
     [Header("Where the water is")]
-    // Both in metres of rope paid out. Re-picked on every descent from the top.
+    // Metres of rope. Re-picked each descent from the top.
     [SerializeField] float minWaterDepth = 15f;
     [SerializeField] float maxWaterDepth = 30f;
+
+    // 0 = always water, 1 = never.
+    [Range(0f, 1f)]
+    [SerializeField] float dryChance = 0.5f;
 
     [Header("Bucket")]
     // Shown while HasWater.
     [SerializeField] Transform water;
 
-    // A descent that starts with the rope less than this far above its shortest
-    // length counts as a new trip, and gets a fresh water table.
+    // A descent starting this close to the top counts as a new trip.
     [SerializeField] float newTripWithin = 1f;
 
-    // Has to be above Crank's minimum rope length, or the water never comes up.
+    // Must be above Crank's minimum rope length, or the water never comes up.
     [Tooltip("Rope length at which a full bucket is ready to pour.")]
     [SerializeField] float pourAtRopeLength = 1.2f;
 
     public int FillCount { get; private set; }
     public int PourCount { get; private set; }
     public int DeliveredCount { get; private set; }
-
     public int HitGroundCount { get; private set; }
 
     public bool HasWater { get; private set; }
     public bool PourPending { get; private set; }
+    public bool WaterExist { get; private set; }
 
-    public bool WaterExist = false;
-
-    // Metres of rope. Picked lazily so the scene does not have to store one.
+    // Picked lazily so the scene does not have to store one.
     public float WaterDepth
     {
         get
@@ -52,12 +52,13 @@ public class Bucket : MonoBehaviour
         }
     }
 
-    // Read by WellAudio to scale the splash.
+    // Read by WellAudio to scale the splash and the thud.
     public float MaxWaterDepth => maxWaterDepth;
 
     float _waterDepth;
     float _lastLength;
     bool _wasGoingDown;
+    bool _hitGround;
 
     void Update()
     {
@@ -69,9 +70,6 @@ public class Bucket : MonoBehaviour
         bool startingDown = goingDown && !_wasGoingDown;
         bool fromTheTop = length <= crank.MinRopeLength + newTripWithin;
 
-        // A fresh descent from the top is a fresh trip. Rolling the depth on delivery
-        // instead meant it only changed if the player wound the rope all the way in,
-        // which they never do, so every descent hit water at the same distance.
         if (startingDown && fromTheTop && !HasWater)
             StartNewTrip();
 
@@ -83,19 +81,20 @@ public class Bucket : MonoBehaviour
 
     void Refresh(float ropeLength)
     {
-        if (!HasWater && ropeLength >= WaterDepth && WaterExist)
+        if (!HasWater && WaterExist && ropeLength >= WaterDepth)
         {
             HasWater = true;
             FillCount++;
         }
 
-        if (!HasWater && ropeLength >= WaterDepth && !WaterExist)
+        // Latched: the well has no bottom, so without this it would fire every frame.
+        if (!HasWater && !WaterExist && !_hitGround && ropeLength >= WaterDepth)
         {
-            
+            _hitGround = true;
             HitGroundCount++;
         }
 
-        // Ready to pour, but not emptied: the pour takes the water, not this.
+        // Ready to pour, but not emptied - the pour takes the water.
         if (HasWater && !PourPending && ropeLength <= pourAtRopeLength)
         {
             PourPending = true;
@@ -110,8 +109,13 @@ public class Bucket : MonoBehaviour
     {
         HasWater = false;
         PourPending = false;
+        _hitGround = false;
+
         PickWaterDepth();
-        RandomWater();
+        WaterExist = Random.value >= dryChance;
+
+        // Water or bottom, the crank starts to fight back from here.
+        crank.StrainFrom = WaterDepth;
 
         if (water != null)
             water.gameObject.SetActive(false);
@@ -136,60 +140,13 @@ public class Bucket : MonoBehaviour
         float previous = _waterDepth;
         float span = maxWaterDepth - minWaterDepth;
 
-        // Uniform random clumps, and two trips landing within a few metres of each
-        // other read as "not random at all", so re-roll until the new depth is clearly
-        // different from the last one.
+        // Re-roll if it lands near the last one; two similar trips read as "not random".
         for (int attempt = 0; attempt < 8; attempt++)
         {
             _waterDepth = Random.Range(minWaterDepth, maxWaterDepth);
 
             if (previous <= 0f || Mathf.Abs(_waterDepth - previous) >= span * 0.25f)
                 return;
-        }
-    }
-
-    private void RandomWater()
-    {
-        int rand = Random.Range(0, 8);
-        WaterExist = false;
-        switch (rand)
-        {
-            case 0:
-                WaterExist = false; 
-                
-                break;
-            case 1:
-                WaterExist = false;
-
-                break;
-            case 2:
-                WaterExist = false;
-
-                break;
-            case 3:
-                WaterExist = false;
-
-                break;
-            case 4:
-                WaterExist = false;
-
-                break;
-            case 5:
-                WaterExist = false;
-
-                break;
-            case 6:
-                WaterExist = true;
-
-                break;
-            case 7:
-                WaterExist = true;
-
-                break;
-            case 8:
-                WaterExist = true;
-
-                break;
         }
     }
 }

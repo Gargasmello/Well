@@ -1,29 +1,41 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Winch crank. Drag the wheel to pay rope out or wind it in.
-// Owns the rope length: Rope and Pouring read it. Pouring writes Locked, and
-// WellAudio reads TurnSpeed.
+// Winch crank. Owns the rope length; Rope and Pouring read it, Pouring writes Locked.
 public class Crank : MonoBehaviour
 {
     [Header("Drum")]
-    // The feel knob: 0.3 gives about 1.9 m per full turn, 0.9 gives 5.7 m.
+    // Metres of rope per radian. 0.3 is about 1.9 m per full turn.
     [Tooltip("Metres of rope released per radian of wheel rotation.")]
     [SerializeField] float drumRadius = 0.3f;
 
-    // Shortest the rope ever gets, in metres. There is no maximum.
+    // Metres. No maximum of its own, but StrainFrom caps it.
     [SerializeField] float minRopeLength = 0.8f;
 
     [Header("Feel")]
     // How close the mouse has to be to the wheel centre to grab it.
     [SerializeField] float grabRadius = 0.8f;
 
-    // Degrees the wheel turns per notch of the scroll wheel.
+    // Degrees per scroll-wheel notch.
     [SerializeField] float scrollDegreesPerNotch = 8f;
 
-    // Negative until the getter runs, which replaces it with minRopeLength. That
-    // saves the scene from having to store a starting length.
+    [Header("Strain")]
+    // Turns of rope between the bucket touching water or bottom and the crank locking
+    // solid. The gearing falls off across this span, so it grinds rather than stopping dead.
+    [Tooltip("Turns of slack before the crank locks up.")]
+    [SerializeField] float strainTurns = 2f;
+
+    // Gearing at the lock. Lower is heavier.
+    [SerializeField] float strainGear = 0.15f;
+
+    // Negative until first read; the getter replaces it with minRopeLength.
     [SerializeField] float ropeLength = -1f;
+
+    // Rope length at which the crank starts to resist. Bucket sets this each trip; beyond
+    // it the gearing falls away until the rope locks at StrainFrom + strainTurns.
+    public float StrainFrom { get; set; } = float.PositiveInfinity;
+
+    public float RopeLimit => StrainFrom + strainTurns * 2f * Mathf.PI * drumRadius;
 
     // Metres of rope currently out.
     public float RopeLength
@@ -42,8 +54,7 @@ public class Crank : MonoBehaviour
     // Signed degrees per second, smoothed. WellAudio maps its magnitude to creak volume.
     public float TurnSpeed { get; private set; }
 
-    // Set by Pouring for the length of the pour, so you cannot start heading back
-    // down with the bucket half emptied.
+    // Set by Pouring while it animates.
     public bool Locked { get; set; }
 
     Camera _camera;
@@ -66,8 +77,7 @@ public class Crank : MonoBehaviour
             return;
         }
 
-        // Angle from the wheel centre to the mouse. The drag is driven by how far
-        // that angle swings, not by how far the mouse travels.
+        // Driven by the angle around the wheel, not by how far the mouse travels.
         Vector2 offset = MouseWorldPosition(mouse) - (Vector2)transform.position;
 
         if (mouse.leftButton.wasPressedThisFrame && offset.magnitude <= grabRadius)
@@ -91,21 +101,29 @@ public class Crank : MonoBehaviour
             Turn(notches * scrollDegreesPerNotch);
     }
 
-    // Counter-clockwise is positive. Cranking clockwise lets rope out, so the bucket
-    // goes down.
+    // Counter-clockwise is positive; clockwise lets rope out.
     void Turn(float deltaDegrees)
     {
-        SetRopeLength(RopeLength - deltaDegrees * Mathf.Deg2Rad * drumRadius);
+        float gear = GearAt(RopeLength);
+        SetRopeLength(RopeLength - deltaDegrees * Mathf.Deg2Rad * drumRadius * gear);
     }
 
-    // Sets the rope length and turns the wheel by the matching angle. The wheel
-    // rotation is derived from how far the rope actually moved rather than from the
-    // input, so once the rope is clamped at its minimum the wheel stops instead of
-    // spinning on the spot. Pouring drives this directly while it animates.
+    // 1 outside the strain zone, falling to strainGear at the lock. Scaling the rope
+    // movement also scales the wheel, because SetRopeLength derives the angle from it.
+    float GearAt(float length)
+    {
+        if (length <= StrainFrom)
+            return 1f;
+
+        return Mathf.Lerp(1f, strainGear, Mathf.InverseLerp(StrainFrom, RopeLimit, length));
+    }
+
+    // Wheel angle comes from how far the rope moved, so the wheel stops when the rope
+    // clamps at either end. Pouring drives this directly while it animates.
     public void SetRopeLength(float length)
     {
         float before = RopeLength;
-        float after = Mathf.Max(length, minRopeLength);
+        float after = Mathf.Clamp(length, minRopeLength, RopeLimit);
 
         float degreesTurned = (before - after) / (drumRadius * Mathf.Deg2Rad);
 
@@ -113,7 +131,7 @@ public class Crank : MonoBehaviour
         ropeLength = after;
     }
 
-    // 0.35 is the smoothing factor; raw per-frame deltas are too noisy to drive audio.
+    // 0.35 smooths; raw per-frame deltas are too noisy to drive audio.
     void TrackTurnSpeed()
     {
         float angle = transform.localEulerAngles.z;
@@ -128,8 +146,7 @@ public class Crank : MonoBehaviour
         return Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
     }
 
-    // ScreenToWorldPoint wants a z, and for an orthographic camera that z is the
-    // distance from the camera to the z = 0 plane.
+    // Orthographic: the z is the camera's distance to the z = 0 plane.
     Vector2 MouseWorldPosition(Mouse mouse)
     {
         Vector2 screen = mouse.position.ReadValue();
