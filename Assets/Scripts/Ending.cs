@@ -1,11 +1,9 @@
 using UnityEngine;
 
-// The outro. Starts once, when the ground is fully green: pulls the camera back, drifts the
-// clouds, sways the plants, plays the success sting, then hands over to the restart button.
-// Clouds and sway keep running afterwards, so the results screen is not a frozen frame.
+// The outro: camera pulls back, clouds drift, plants sway, sting plays, then the restart
+// button appears. Clouds and sway carry on afterwards.
 //
-// Pull-back must stop above the dirt (bottom y = -6.8) or the sky shows through the floor.
-// cloudDrift has to beat the zoom, or the right-hand clouds appear to drift backwards.
+// Pull-back must stop above the dirt (bottom y = -6.8); cloudDrift must beat the zoom.
 public class Ending : MonoBehaviour
 {
     [SerializeField] GroundGreening greening;
@@ -17,8 +15,7 @@ public class Ending : MonoBehaviour
     [SerializeField] float zoomOutTo = 4.2f;
     [SerializeField] float endY = -0.1f;
 
-    // One entry per cloud, each a group of blocks. Wrapped individually, so they must not
-    // share a parent that moves - the blocks of one cloud would wrap at different times.
+    // One entry per cloud, each a group of blocks. Wrapped individually, so no shared parent.
     [SerializeField] Transform[] clouds;
     [SerializeField] float cloudDrift = 0.25f;
     [SerializeField] float cloudWrapMargin = 1.5f;
@@ -93,8 +90,7 @@ public class Ending : MonoBehaviour
         view.transform.position = position;
     }
 
-    // Moved a little each frame rather than from the elapsed time, so the wrap can just
-    // subtract the full span instead of accumulating an ever-growing offset.
+    // Moved per frame, not from elapsed time, so the wrap can just subtract the span.
     void DriftClouds()
     {
         if (clouds == null || view == null)
@@ -120,8 +116,7 @@ public class Ending : MonoBehaviour
         }
     }
 
-    // Rotates each plant about its base. Phased by index so they do not move as one, and
-    // driven by elapsed time rather than the outro clock, so it carries on afterwards.
+    // Phased by index so they do not move as one, and driven by elapsed time, so it never stops.
     void Sway()
     {
         Transform[] plants = greening != null ? greening.Plants : null;

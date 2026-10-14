@@ -20,8 +20,7 @@ public class Crank : MonoBehaviour
     [SerializeField] float scrollDegreesPerNotch = 8f;
 
     [Header("Strain")]
-    // Turns of rope between the bucket touching water or bottom and the crank locking
-    // solid. The gearing falls off across this span, so it grinds rather than stopping dead.
+    // Turns of slack between touching water or bottom and the crank locking solid.
     [Tooltip("Turns of slack before the crank locks up.")]
     [SerializeField] float strainTurns = 2f;
 
@@ -31,8 +30,7 @@ public class Crank : MonoBehaviour
     // Negative until first read; the getter replaces it with minRopeLength.
     [SerializeField] float ropeLength = -1f;
 
-    // Rope length at which the crank starts to resist. Bucket sets this each trip; beyond
-    // it the gearing falls away until the rope locks at StrainFrom + strainTurns.
+    // Rope length at which the crank starts to resist. Bucket sets this each trip.
     public float StrainFrom { get; set; } = float.PositiveInfinity;
 
     public float RopeLimit => StrainFrom + strainTurns * 2f * Mathf.PI * drumRadius;
@@ -108,8 +106,7 @@ public class Crank : MonoBehaviour
         SetRopeLength(RopeLength - deltaDegrees * Mathf.Deg2Rad * drumRadius * gear);
     }
 
-    // 1 outside the strain zone, falling to strainGear at the lock. Scaling the rope
-    // movement also scales the wheel, because SetRopeLength derives the angle from it.
+    // 1 outside the strain zone, falling to strainGear at the lock. Also gears the wheel.
     float GearAt(float length)
     {
         if (length <= StrainFrom)
@@ -118,8 +115,7 @@ public class Crank : MonoBehaviour
         return Mathf.Lerp(1f, strainGear, Mathf.InverseLerp(StrainFrom, RopeLimit, length));
     }
 
-    // Wheel angle comes from how far the rope moved, so the wheel stops when the rope
-    // clamps at either end. Pouring drives this directly while it animates.
+    // Wheel angle comes from the rope movement, so the wheel stops when the rope clamps.
     public void SetRopeLength(float length)
     {
         float before = RopeLength;

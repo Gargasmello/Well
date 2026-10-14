@@ -2156,11 +2156,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bucket
   crank: {fileID: 724139362}
-  minWaterDepth: 15
-  maxWaterDepth: 30
-  dryChance: 0.5
-  dryRamp: 3
-  wetRamp: 3
+  minWaterDepth: 20
+  maxWaterDepth: 40
+  dryChance: 0.7
+  dryRamp: 4
+  wetRamp: 2
   water: {fileID: 1230168102}
   newTripWithin: 1
   pourAtRopeLength: 1.2
@@ -2462,7 +2462,7 @@ Transform:
   m_GameObject: {fileID: 442228964}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.34, y: -2.8, z: 0}
+  m_LocalPosition: {x: 3.12, y: -2.8, z: 0}
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -5689,6 +5689,7 @@ GameObject:
   - component: {fileID: 848079789}
   - component: {fileID: 848079794}
   - component: {fileID: 848079793}
+  - component: {fileID: 848079795}
   m_Layer: 0
   m_Name: Well
   m_TagString: Untagged
@@ -5776,6 +5777,8 @@ MonoBehaviour:
   - {fileID: 1568044644}
   soakSeconds: 1.5
   growSeconds: 1.2
+  moodSeconds: 1.5
+  droopDegrees: 24
 --- !u!114 &848079791
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5884,6 +5887,21 @@ MonoBehaviour:
   position: {x: 0, y: -180}
   background: {r: 0.72156864, g: 0.72156864, b: 0.6901961, a: 1}
   textColour: {r: 0.16470589, g: 0.16470589, b: 0.13333334, a: 1}
+--- !u!114 &848079795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 848079788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7ef5c52da2fb8f4e95c140d86d1d0e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Weather
+  bucket: {fileID: 406863151}
+  sky: {fileID: 519420031}
+  block: {fileID: 438516616}
 --- !u!1 &849284252
 GameObject:
   m_ObjectHideFlags: 0
@@ -11887,7 +11905,7 @@ Transform:
   m_GameObject: {fileID: 2021451507}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.37, y: -2.8, z: 0}
+  m_LocalPosition: {x: 5.74, y: -2.8, z: 0}
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:

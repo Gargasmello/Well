@@ -3,12 +3,10 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// A restart button, built at runtime so nothing needs wiring up in the scene. Hidden until
-// Ending calls Show(). The click is handled here rather than through an EventSystem, so the
-// project needs no input module for it.
+// A restart button, built at runtime so nothing needs wiring in the scene. Hidden until Ending
+// calls Show(). The click is handled here, so no EventSystem or input module is needed.
 //
-// Restarting reloads the active scene, which means Well.unity has to be in the build
-// settings - the build index is -1 otherwise.
+// Reloading needs Well.unity in the build settings; the build index is -1 otherwise.
 public class RestartButton : MonoBehaviour
 {
     [SerializeField] string label = "Restart";

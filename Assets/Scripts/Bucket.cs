@@ -17,13 +17,11 @@ public class Bucket : MonoBehaviour
     [SerializeField] float minWaterDepth = 15f;
     [SerializeField] float maxWaterDepth = 30f;
 
-    // Base chance a trip comes up dry. The ramps below scale with it, so the streak limits
-    // hold whatever this is set to.
+    // Base chance a trip comes up dry. The ramps scale with it, so the limits hold either way.
     [Range(0f, 1f)]
     [SerializeField] float dryChance = 0.5f;
 
-    // Trips of dry before water is certain, and of wet before dry is certain. The chance
-    // walks evenly from 1 - dryChance to 1 over dryRamp, and down to 0 over wetRamp.
+    // Trips of dry before water is certain, and of wet before dry is certain.
     [SerializeField] int dryRamp = 3;
     [SerializeField] int wetRamp = 3;
 
@@ -42,10 +40,23 @@ public class Bucket : MonoBehaviour
     public int PourCount { get; private set; }
     public int DeliveredCount { get; private set; }
     public int HitGroundCount { get; private set; }
+    public int TripsStarted => _trips;
+    public int LastDeliveredTrip { get; private set; }
 
     public bool HasWater { get; private set; }
     public bool PourPending { get; private set; }
     public bool WaterExist { get; private set; }
+
+    public void ForceDryTrips(int count)
+    {
+        _forcedDryTripsRemaining = Mathf.Max(_forcedDryTripsRemaining, count);
+
+        if (_trips > 0 && !_hitGround && !HasWater)
+        {
+            _currentTripForcedDry = true;
+            WaterExist = false;
+        }
+    }
 
     // Picked lazily so the scene does not have to store one.
     public float WaterDepth
@@ -65,12 +76,14 @@ public class Bucket : MonoBehaviour
     float _lastLength;
     bool _wasGoingDown;
     bool _hitGround;
+    bool _firstDryComplete;
+    bool _currentTripForcedDry;
     int _trips;
     int _dryStreak;
     int _wetStreak;
+    int _forcedDryTripsRemaining;
 
-    // Chance this trip has water. Walks evenly between the two extremes, so the step size
-    // follows dryChance rather than being fixed.
+    // Chance this trip has water. The step follows dryChance, so it is never fixed.
     float WaterChance
     {
         get
@@ -120,6 +133,13 @@ public class Bucket : MonoBehaviour
             HitGroundCount++;
             _dryStreak++;
             _wetStreak = 0;
+            _firstDryComplete = true;
+
+            if (_currentTripForcedDry)
+            {
+                _forcedDryTripsRemaining--;
+                _currentTripForcedDry = false;
+            }
         }
 
         // Ready to pour, but not emptied - the pour takes the water.
@@ -139,6 +159,7 @@ public class Bucket : MonoBehaviour
         PourPending = false;
         _hitGround = false;
         _trips++;
+        _currentTripForcedDry = _forcedDryTripsRemaining > 0;
 
         PickWaterDepth();
         PickWaterExist();
@@ -150,11 +171,10 @@ public class Bucket : MonoBehaviour
             water.gameObject.SetActive(false);
     }
 
-    // First trip is forced dry. The two ramps reach their extremes exactly at the ramp
-    // lengths, so those doubles as the streak caps.
+    // Keep the first bucket dry until it actually reaches the bottom.
     void PickWaterExist()
     {
-        if (_trips <= 1)
+        if (!_firstDryComplete || _currentTripForcedDry)
             WaterExist = false;
         else if (_dryStreak >= dryRamp)
             WaterExist = true;
@@ -173,6 +193,7 @@ public class Bucket : MonoBehaviour
         HasWater = false;
         PourPending = false;
         DeliveredCount++;
+        LastDeliveredTrip = _trips;
 
         if (water != null)
             water.gameObject.SetActive(false);
