@@ -1786,15 +1786,7 @@ MonoBehaviour:
   creakFullVolumeAt: 220
   creakMaxVolume: 0.55
   splash: {fileID: 605326332}
-  splashVolumeNear: 1
-  splashVolumeFar: 0.2
-  splashCutoffNear: 1600
-  splashCutoffFar: 400
   ground: {fileID: 1310546635}
-  groundVolumeNear: 0.8
-  groundVolumeFar: 0.15
-  groundCutoffNear: 900
-  groundCutoffFar: 250
 --- !u!1 &360480327
 GameObject:
   m_ObjectHideFlags: 0
@@ -2156,13 +2148,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bucket
   crank: {fileID: 724139362}
-  minWaterDepth: 20
-  maxWaterDepth: 40
-  dryChance: 0.7
-  dryRamp: 4
+  minWaterDepth: 15
+  maxWaterDepth: 30
+  dryChance: 0.5
+  dryRamp: 3
   wetRamp: 2
   water: {fileID: 1230168102}
   newTripWithin: 1
+  bottomDetentTravel: 0.15
+  sinkDepth: 2
   pourAtRopeLength: 1.2
 --- !u!1 &409021504
 GameObject:
@@ -3448,7 +3442,6 @@ GameObject:
   m_Component:
   - component: {fileID: 605326330}
   - component: {fileID: 605326332}
-  - component: {fileID: 605326331}
   m_Layer: 0
   m_Name: Splash
   m_TagString: Untagged
@@ -3471,31 +3464,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 328333328}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!169 &605326331
-AudioLowPassFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 605326329}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_LowpassResonanceQ: 1
-  lowpassLevelCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0.035925422
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
 --- !u!82 &605326332
 AudioSource:
   m_ObjectHideFlags: 0
@@ -4752,8 +4720,7 @@ MonoBehaviour:
   minRopeLength: 0.8
   grabRadius: 0.8
   scrollDegreesPerNotch: 8
-  strainTurns: 2
-  strainGear: 0.15
+  throwSeconds: 0.12
   ropeLength: 0.8
 --- !u!4 &724139363
 Transform:
@@ -8229,7 +8196,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1310546633}
   - component: {fileID: 1310546635}
-  - component: {fileID: 1310546634}
   m_Layer: 0
   m_Name: GroundHit
   m_TagString: Untagged
@@ -8252,31 +8218,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 328333328}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!169 &1310546634
-AudioLowPassFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1310546632}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_LowpassResonanceQ: 1
-  lowpassLevelCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0.022282856
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
 --- !u!82 &1310546635
 AudioSource:
   m_ObjectHideFlags: 0

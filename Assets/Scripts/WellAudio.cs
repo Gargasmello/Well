@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Creak follows wheel speed; splash and thud follow how deep the bucket went.
+// Creak follows wheel speed; splash and thud play at a fixed level.
 public class WellAudio : MonoBehaviour
 {
     [SerializeField] Crank crank;
@@ -15,30 +15,13 @@ public class WellAudio : MonoBehaviour
     [SerializeField] float creakMaxVolume = 0.55f;
 
     [Header("Splash")]
-    // The only sign the bucket reached water, so it carries the distance.
     [SerializeField] AudioSource splash;
 
-    [SerializeField] float splashVolumeNear = 1f;
-    [SerializeField] float splashVolumeFar = 0.2f;
-
-    // Low-pass cutoff in Hz. Lower is duller.
-    [SerializeField] float splashCutoffNear = 1600f;
-    [SerializeField] float splashCutoffFar = 400f;
-
     [Header("Ground hit")]
-    // A dry trip. Softer than the splash: a disappointment, not a reward.
     [SerializeField] AudioSource ground;
 
-    [SerializeField] float groundVolumeNear = 0.8f;
-    [SerializeField] float groundVolumeFar = 0.15f;
-
-    [SerializeField] float groundCutoffNear = 900f;
-    [SerializeField] float groundCutoffFar = 250f;
-
-    AudioLowPassFilter _splashFilter;
-    AudioLowPassFilter _groundFilter;
-    int _lastFillCount;
-    int _lastHitGroundCount;
+    int _lastSplashCount;
+    int _lastThrowCount;
 
     void Start()
     {
@@ -72,65 +55,34 @@ public class WellAudio : MonoBehaviour
         creak.pitch = Mathf.Lerp(0.85f, 1.15f, effort);
     }
 
-    // The counts are running totals, so watch for a change rather than a value.
+    // SplashCount is a running total, so watch it for a change rather than for a value. It
+    // counts both directions, so breaking back out of the surface splashes too.
     void UpdateSplash()
     {
         if (splash == null || bucket == null)
             return;
 
-        if (bucket.FillCount == _lastFillCount)
+        if (bucket.SplashCount == _lastSplashCount)
             return;
 
-        _lastFillCount = bucket.FillCount;
+        _lastSplashCount = bucket.SplashCount;
 
-        // 0 at the surface, 1 at the deepest the table ever gets.
-        float distance = Mathf.Clamp01(bucket.WaterDepth / bucket.MaxWaterDepth);
-
-        splash.volume = Mathf.Lerp(splashVolumeNear, splashVolumeFar, distance);
-
-        if (SplashFilter != null)
-            SplashFilter.cutoffFrequency = Mathf.Lerp(splashCutoffNear, splashCutoffFar, distance);
-
-        splash.Play();
+        if (splash.clip != null)
+            splash.PlayOneShot(splash.clip);
     }
 
+    // ThrowCount is a running total, so watch it for a change rather than for a value.
     void UpdateGround()
     {
-        if (ground == null || bucket == null)
+        if (ground == null || crank == null)
             return;
 
-        if (bucket.HitGroundCount == _lastHitGroundCount)
+        if (crank.ThrowCount == _lastThrowCount)
             return;
 
-        _lastHitGroundCount = bucket.HitGroundCount;
+        _lastThrowCount = crank.ThrowCount;
 
-        float distance = Mathf.Clamp01(bucket.WaterDepth / bucket.MaxWaterDepth);
-
-        ground.volume = Mathf.Lerp(groundVolumeNear, groundVolumeFar, distance);
-
-        if (GroundFilter != null)
-            GroundFilter.cutoffFrequency = Mathf.Lerp(groundCutoffNear, groundCutoffFar, distance);
-
-        ground.Play();
-    }
-
-    AudioLowPassFilter SplashFilter
-    {
-        get
-        {
-            if (_splashFilter == null && splash != null)
-                _splashFilter = splash.GetComponent<AudioLowPassFilter>();
-            return _splashFilter;
-        }
-    }
-
-    AudioLowPassFilter GroundFilter
-    {
-        get
-        {
-            if (_groundFilter == null && ground != null)
-                _groundFilter = ground.GetComponent<AudioLowPassFilter>();
-            return _groundFilter;
-        }
+        if (ground.clip != null)
+            ground.PlayOneShot(ground.clip);
     }
 }

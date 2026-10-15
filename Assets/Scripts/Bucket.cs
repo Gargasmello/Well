@@ -4,10 +4,10 @@ using UnityEngine;
 //
 //   HasWater        true from the moment it passes the water table until the pour
 //   PourPending     true once it is back up and waiting for Pouring
-//   FillCount       ++ on fill         -> WellAudio plays the splash
-//   HitGroundCount  ++ on dry bottom   -> WellAudio plays the thud
-//   PourCount       ++ on ready        -> Pouring starts the animation
-//   DeliveredCount  ++ on tipped       -> GroundGreening greens the ground
+//   SplashCount     ++ crossing the surface either way -> WellAudio plays the splash
+//   HitGroundCount  ++ on the first dry bottom         -> Weather counts dry trips
+//   PourCount       ++ on ready                        -> Pouring starts the animation
+//   DeliveredCount  ++ on tipped                       -> GroundGreening greens the ground
 public class Bucket : MonoBehaviour
 {
     [SerializeField] Crank crank;
@@ -32,14 +32,24 @@ public class Bucket : MonoBehaviour
     // A descent starting this close to the top counts as a new trip.
     [SerializeField] float newTripWithin = 1f;
 
+    // Metres between the two stops the crank snaps between once a dry trip reaches the bottom.
+    // Zero means it just locks there, with no detent to rock.
+    [SerializeField] float bottomDetentTravel = 0.15f;
+
+    // Metres the bucket sinks below the surface before the crank locks on a wet trip.
+    [SerializeField] float sinkDepth = 2f;
+
     // Must be above Crank's minimum rope length, or the water never comes up.
     [Tooltip("Rope length at which a full bucket is ready to pour.")]
     [SerializeField] float pourAtRopeLength = 1.2f;
 
-    public int FillCount { get; private set; }
     public int PourCount { get; private set; }
     public int DeliveredCount { get; private set; }
     public int HitGroundCount { get; private set; }
+
+    // ++ every time the bucket crosses the water surface, either way. WellAudio watches this.
+    public int SplashCount { get; private set; }
+
     public int TripsStarted => _trips;
     public int LastDeliveredTrip { get; private set; }
 
@@ -76,7 +86,9 @@ public class Bucket : MonoBehaviour
     float _lastLength;
     bool _wasGoingDown;
     bool _hitGround;
+    bool _underWater;
     bool _firstDryComplete;
+    bool _openingWetDone;
     bool _currentTripForcedDry;
     int _trips;
     int _dryStreak;
@@ -121,13 +133,24 @@ public class Bucket : MonoBehaviour
         if (!HasWater && WaterExist && ropeLength >= WaterDepth)
         {
             HasWater = true;
-            FillCount++;
+            SplashCount++;
             _wetStreak++;
             _dryStreak = 0;
+            _underWater = true;
         }
 
-        // Latched: the well has no bottom, so without this it would fire every frame.
-        if (!HasWater && !WaterExist && !_hitGround && ropeLength >= WaterDepth)
+        // Winding back up breaks the surface again, which splashes just like going in did.
+        if (_underWater && ropeLength < WaterDepth)
+        {
+            _underWater = false;
+            SplashCount++;
+        }
+
+        // The crank is locked at the water table on a dry trip and has a detent to rock in, so
+        // reaching the top of that travel is what counts as the bottom. Once per trip; every
+        // hit after that is the detent's business, not this.
+        if (!HasWater && !WaterExist && !_hitGround &&
+            ropeLength >= WaterDepth - bottomDetentTravel)
         {
             _hitGround = true;
             HitGroundCount++;
@@ -158,24 +181,34 @@ public class Bucket : MonoBehaviour
         HasWater = false;
         PourPending = false;
         _hitGround = false;
+        _underWater = false;
         _trips++;
         _currentTripForcedDry = _forcedDryTripsRemaining > 0;
 
         PickWaterDepth();
         PickWaterExist();
 
-        // Water or bottom, the crank starts to fight back from here.
-        crank.StrainFrom = WaterDepth;
+        // A wet trip sinks a little way below the surface before the crank locks; a dry one
+        // stops at the bottom and gets a detent to rock in.
+        crank.RopeLimit = WaterDepth + (WaterExist ? sinkDepth : 0f);
+        crank.DetentTravel = WaterExist ? 0f : bottomDetentTravel;
 
         if (water != null)
             water.gameObject.SetActive(false);
     }
 
-    // Keep the first bucket dry until it actually reaches the bottom.
+    // The opening two descents are scripted: the first finds nothing, the one after it always
+    // finds water. That puts the discovery on the second trip instead of leaving it to the
+    // odds. Everything after that goes through the ramps.
     void PickWaterExist()
     {
         if (!_firstDryComplete || _currentTripForcedDry)
             WaterExist = false;
+        else if (!_openingWetDone)
+        {
+            _openingWetDone = true;
+            WaterExist = true;
+        }
         else if (_dryStreak >= dryRamp)
             WaterExist = true;
         else if (_wetStreak >= wetRamp)
